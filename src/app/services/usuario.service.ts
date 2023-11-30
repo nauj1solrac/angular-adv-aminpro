@@ -28,6 +28,11 @@ export class UsuarioService {
     return localStorage.getItem('token') || '';
   }
 
+  get role(): 'ADMIN_ROLE' | 'USER_ROLE'{
+    // return this.usuario.role;
+    return this.usuario.role ?? 'USER_ROLE';
+  }
+
   get uid(): string {
     return this.usuario.uid || '';
   }
@@ -49,6 +54,11 @@ export class UsuarioService {
     });
   }
 
+  guardarLocalStorage(token: string, menu: any){
+    localStorage.setItem('token', token);
+    localStorage.setItem('menu', JSON.stringify(menu));
+  }
+
   async handleCredentialResponse(response: any) {
     this.loginGoogle(response.credential)
     .subscribe(correcto => {
@@ -61,6 +71,8 @@ export class UsuarioService {
 
   logout(){
     localStorage.removeItem('token');
+    localStorage.removeItem('menu');
+    // TODO: Borrar menu
     window.google.accounts.id.disableAutoSelect();
     this.router.navigateByUrl('/login');
   }
@@ -74,7 +86,7 @@ export class UsuarioService {
       map((resp: any) => {
         const { email, google, nombre, role, img = '',  uid} = resp.usuario;
         this.usuario = new Usuario(nombre, email, '', img, google, role, uid);
-        localStorage.setItem('token', resp.token);
+        this.guardarLocalStorage(resp.token, resp.menu);
         return true;
       }),
       catchError(error => of(false))
@@ -83,6 +95,11 @@ export class UsuarioService {
 
   crearUusario(formData: RegisterForm){
     return this.http.post(`${base_url}/usuarios`, formData)
+    .pipe(
+      tap((resp: any) => {
+        this.guardarLocalStorage(resp.token, resp.menu);
+      })
+    )
   }
 
   actualizarPerfil(data: {email: string, nombre: string, role: string | undefined}){
@@ -98,7 +115,7 @@ export class UsuarioService {
     return this.http.post(`${ base_url }/login`, formData )
     .pipe(
       tap( (resp: any) => {
-        localStorage.setItem('token', resp.token )
+        this.guardarLocalStorage(resp.token, resp.menu)
       })
     );
   }
@@ -107,7 +124,7 @@ export class UsuarioService {
     return this.http.post(`${base_url}/login/google`, {token})
     .pipe(
       map((resp: any) => {
-        localStorage.setItem('token', resp.token)
+        this.guardarLocalStorage(resp.token, resp.menu)
       })
     )
   }
